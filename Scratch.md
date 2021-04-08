@@ -1,0 +1,1 @@
+﻿An auth server that authenticates/authorizes. It stores user data.
