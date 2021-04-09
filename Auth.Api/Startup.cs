@@ -1,5 +1,6 @@
 using Auth.Api.Services.ApplicationService;
 using Auth.Api.Services.TimeService;
+using Auth.Api.Services.TokenService;
 using Auth.Api.Services.UserService;
 using Auth.Core.Factories;
 using Auth.Core.Services.TimeService;
@@ -29,10 +30,13 @@ namespace Auth.Api
 
             services.AddSingleton<UserFactory>();
             services.AddSingleton<ApplicationFactory>();
+            services.AddSingleton<TokenFactory>();
+            
             services.AddSingleton<ITimeService, TimeService>();
-
+            
             services.AddSingleton<IUserService, UserService>();
             services.AddSingleton<IApplicationService, ApplicationService>();
+            services.AddSingleton<ITokenService, TokenService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
