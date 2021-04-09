@@ -9,7 +9,7 @@ namespace Auth.Core.Factories
     public class ApplicationFactory : IDisposable
     {
         private readonly ITimeService _timeService;
-        private readonly SHA1 _sha1 = SHA1.Create();
+        private readonly SHA1 _sha1 = new SHA1CryptoServiceProvider();
 
         public ApplicationFactory(ITimeService timeService)
         {
@@ -50,9 +50,8 @@ namespace Auth.Core.Factories
         private string Hash(string proposedString)
         {
             var proposedStringBytes = Encoding.UTF8.GetBytes(proposedString);
-
-            var hashBytes = _sha1.ComputeHash(proposedStringBytes, 0, proposedStringBytes.Length);
-            return Encoding.UTF8.GetString(hashBytes);
+            var hashBytes = _sha1.ComputeHash(proposedStringBytes);
+            return Convert.ToHexString(hashBytes);
         }
 
         public void Dispose()
