@@ -35,6 +35,11 @@ namespace Auth.Core.Factories
             return application;
         }
 
+        public void SetFirstPartyApplication(Application application)
+        {
+            application.FirstParty = true;
+        }
+
         private string CreateClientSecret()
         {
             string proposedString = Guid.NewGuid().ToString();

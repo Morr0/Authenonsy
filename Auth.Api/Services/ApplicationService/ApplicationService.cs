@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Auth.Api.Controllers.Application.Requests;
 using Auth.Core.Factories;
@@ -23,6 +24,8 @@ namespace Auth.Api.Services.ApplicationService
             var application =
                 _applicationFactory.Create(creatorId, dto.Name, dto.Description, dto.WebsiteUrl, dto.RedirectUrl);
 
+            if (!_applications.Any()) _applicationFactory.SetFirstPartyApplication(application);
+            
             _applications.Add(application.ClientId, application);
 
             return application;

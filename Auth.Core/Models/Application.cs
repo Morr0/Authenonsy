@@ -15,5 +15,7 @@ namespace Auth.Core.Models
         public string RedirectUrl { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public bool FirstParty { get; set; }
     }
 }
