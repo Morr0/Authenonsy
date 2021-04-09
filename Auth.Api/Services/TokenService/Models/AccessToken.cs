@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Auth.Core.Services.TokenService.Models
+namespace Auth.Api.Services.TokenService.Models
 {
     public class AccessToken
     {

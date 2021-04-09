@@ -1,6 +1,6 @@
-﻿using Auth.Core.Services.TokenService.Models;
+﻿using Auth.Api.Services.TokenService.Models;
 
-namespace Auth.Core.Services.TokenService
+namespace Auth.Api.Services.TokenService
 {
     public interface ITokenService
     {
