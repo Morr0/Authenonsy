@@ -1,3 +1,7 @@
+using Auth.Api.Services.TimeService;
+using Auth.Api.Services.UserService;
+using Auth.Core.Factories;
+using Auth.Core.Services.TimeService;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +25,12 @@ namespace Auth.Api
         {
             services.AddControllers();
             services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo {Title = "Auth.Api", Version = "v1"}); });
+
+            services.AddSingleton<UserFactory>();
+            services.AddSingleton<ApplicationFactory>();
+            services.AddSingleton<ITimeService, TimeService>();
+
+            services.AddSingleton<IUserService, UserService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -37,7 +47,10 @@ namespace Auth.Api
 
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
         }
     }
 }

@@ -13,13 +13,14 @@ namespace Auth.Core.Factories
             _timeService = timeService;
         }
         
-        public User Create(string name, string password, string email)
+        public User Create(string username, string name, string password, string email)
         {
             var user = new User
             {
                 Name = name,
                 Password = password,
-                Email = email
+                Email = email,
+                Username = username.ToLowerInvariant()
             };
 
             user.Id = Guid.NewGuid().ToString();
