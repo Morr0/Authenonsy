@@ -43,5 +43,15 @@ namespace Auth.Api.Services.UserService
 
             return exists ? user : null;
         }
+
+        public async Task<bool> Exists(string username, string password)
+        {
+            bool exists = _usersByUsername.TryGetValue(username, out var user);
+            if (!exists) return false;
+
+            bool samePassword = user.Password == password;
+
+            return samePassword;
+        }
     }
 }
