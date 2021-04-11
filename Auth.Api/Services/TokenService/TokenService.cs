@@ -46,6 +46,20 @@ namespace Auth.Api.Services.TokenService
             return exists;
         }
 
+        public async Task<AccessToken> Get(string token)
+        {
+            bool exists = _tokens.TryGetValue(token, out var model);
+            if (!exists) return null;
+
+            if (model.ExpiresAt <= _timeService.GetDateTime())
+            {
+                exists = false;
+                _tokens.Remove(token);
+            }
+
+            return exists ? model : null;
+        }
+
         private void EnsureCorrectGrantTypeAndApplicationPairs(string grantType, bool firstPartyApplication)
         {
             if (firstPartyApplication && grantType != TokenServiceConstants.PasswordGrantType)

@@ -76,5 +76,14 @@ namespace Auth.Api.Controllers.Auth
                 });
             }
         }
+
+        [HttpPost("Valid")]
+        public async Task<IActionResult> ValidToken([FromBody] ValidTokenRequest request)
+        {
+            var accessToken = await _tokenService.Get(request.AccessToken).ConfigureAwait(false);
+            if (accessToken is null) return Unauthorized();
+
+            return Ok(accessToken);
+        }
     }
 }

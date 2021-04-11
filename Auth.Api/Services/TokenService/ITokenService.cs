@@ -8,5 +8,6 @@ namespace Auth.Api.Services.TokenService
     {
         Task<AccessToken> GetAccessToken(string grantType, Application application);
         Task<bool> HasCode(string clientId, string code);
+        Task<AccessToken> Get(string token);
     }
 }
