@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Auth.Api", "Auth.Api\Auth.Api.csproj", "{A1C40AE2-B2E8-4BB4-BD1F-40FB0A23A9CC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Auth.Auth.Api", "Auth.Auth.Api\Auth.Auth.Api.csproj", "{A1C40AE2-B2E8-4BB4-BD1F-40FB0A23A9CC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Auth.Core", "Auth.Core\Auth.Core.csproj", "{5D706F30-F0EE-4E62-8E46-229B2AC485F4}"
 EndProject
