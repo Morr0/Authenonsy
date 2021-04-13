@@ -4,8 +4,10 @@ using Auth.Auth.Api.Services.TokenService;
 using Auth.Auth.Api.Services.UserService;
 using Auth.Core.Factories;
 using Auth.Core.Services.TimeService;
+using Auth.Data.Repositories.Database;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,6 +40,11 @@ namespace Auth.Auth.Api
             services.AddSingleton<IUserService, UserService>();
             services.AddSingleton<IApplicationService, ApplicationService>();
             services.AddSingleton<ITokenService, TokenService>();
+
+            services.AddDbContext<DatabaseContext>(opts =>
+            {
+                opts.UseNpgsql(Configuration.GetSection("DatabaseConnection").Value);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
