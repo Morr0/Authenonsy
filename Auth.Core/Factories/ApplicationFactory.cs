@@ -1,22 +1,23 @@
-﻿using System;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System.Collections.Generic;
 using Auth.Core.Models;
+using Auth.Core.Services.RandomStringService;
 using Auth.Core.Services.TimeService;
 
 namespace Auth.Core.Factories
 {
-    public class ApplicationFactory : IDisposable
+    public class ApplicationFactory
     {
         private readonly ITimeService _timeService;
-        private readonly SHA1 _sha1 = new SHA1CryptoServiceProvider();
+        private readonly IRandomStringService _randomStringService;
 
-        public ApplicationFactory(ITimeService timeService)
+        public ApplicationFactory(ITimeService timeService, IRandomStringService randomStringService)
         {
             _timeService = timeService;
+            _randomStringService = randomStringService;
         }
         
-        public Application Create(string creatorId, string name, string description, string websiteUrl, string redirectUrl)
+        public Application Create(string creatorId, string name, string description, string websiteUrl, string redirectUrl, 
+            List<string> scopes = null)
         {
             var application = new Application
             {
@@ -24,11 +25,12 @@ namespace Auth.Core.Factories
                 Name = name,
                 Description = description,
                 WebsiteUrl = websiteUrl,
-                RedirectUrl = redirectUrl
+                RedirectUrl = redirectUrl,
+                Scopes = scopes
             };
 
-            application.ClientId = CreateClientId(creatorId);
-            application.ClientSecret = CreateClientSecret();
+            application.ClientId = _randomStringService.NextValue();
+            application.ClientSecret = _randomStringService.NextValue();
             
             application.CreatedAt = _timeService.GetDateTime();
 
@@ -38,30 +40,6 @@ namespace Auth.Core.Factories
         public void SetFirstPartyApplication(Application application)
         {
             application.FirstParty = true;
-        }
-
-        private string CreateClientSecret()
-        {
-            string proposedString = Guid.NewGuid().ToString();
-            return Hash(proposedString);
-        }
-
-        private string CreateClientId(string creatorId)
-        {
-            string proposedString = $"{Guid.NewGuid().ToString()}-{creatorId}-{_timeService.GetDateTime().Millisecond.ToString()}";
-            return Hash(proposedString);
-        }
-
-        private string Hash(string proposedString)
-        {
-            var proposedStringBytes = Encoding.UTF8.GetBytes(proposedString);
-            var hashBytes = _sha1.ComputeHash(proposedStringBytes);
-            return Convert.ToHexString(hashBytes);
-        }
-
-        public void Dispose()
-        {
-            _sha1.Dispose();
         }
     }
 }

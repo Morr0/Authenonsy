@@ -1,5 +1,6 @@
 ﻿using System;
 using Auth.Core.Models;
+using Auth.Core.Models.Auth;
 using Auth.Core.Services.TimeService;
 
 namespace Auth.Core.Factories
@@ -28,16 +29,6 @@ namespace Auth.Core.Factories
             user.CreatedAt = _timeService.GetDateTime();
 
             return user;
-        }
-
-        public UserApplicationAccess CreateAccess(string applicationId, string userId)
-        {
-            return new UserApplicationAccess
-            {
-                UserId = userId,
-                ApplicationClientId = applicationId,
-                CreatedAt = _timeService.GetDateTime()
-            };
         }
     }
 }

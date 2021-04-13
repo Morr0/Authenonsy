@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Auth.Core.Models
 {
@@ -17,5 +18,7 @@ namespace Auth.Core.Models
         public DateTime CreatedAt { get; set; }
 
         public bool FirstParty { get; set; }
+
+        public List<string> Scopes { get; set; }
     }
 }
