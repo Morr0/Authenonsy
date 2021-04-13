@@ -4,38 +4,42 @@ using System.Threading.Tasks;
 using Auth.Auth.Api.Controllers.Application.Requests;
 using Auth.Core.Factories;
 using Auth.Core.Models;
+using Auth.Data.Repositories.Database;
+using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Auth.Api.Services.ApplicationService
 {
     public class ApplicationService : IApplicationService
     {
         private readonly ApplicationFactory _applicationFactory;
-        private readonly Dictionary<string, Application> _applications;
+        private readonly DatabaseContext _context;
 
-        public ApplicationService(ApplicationFactory applicationFactory)
+        public ApplicationService(ApplicationFactory applicationFactory, DatabaseContext context)
         {
             _applicationFactory = applicationFactory;
-
-            _applications = new Dictionary<string, Application>();
+            _context = context;
         }
         
-        public async Task<Application> Create(string creatorId, ApplicationCreateRequest dto)
+        public async Task<Application> Create(ApplicationCreateRequest dto)
         {
             var application =
-                _applicationFactory.Create(creatorId, dto.Name, dto.Description, dto.WebsiteUrl, dto.RedirectUrl);
+                _applicationFactory.Create(dto.CreatorId, dto.Name, dto.Description, dto.WebsiteUrl, dto.RedirectUrl);
 
-            if (!_applications.Any()) _applicationFactory.SetFirstPartyApplication(application);
-            
-            _applications.Add(application.ClientId, application);
+            bool anyExistingApps = await _context.Application.AsNoTracking().AnyAsync().ConfigureAwait(false);
+            if (!anyExistingApps) _applicationFactory.SetFirstPartyApplication(application);
+
+            await _context.Application.AddAsync(application).ConfigureAwait(false);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
 
             return application;
         }
 
         public async Task<Application> Get(string applicationClientId)
         {
-            bool exists = _applications.TryGetValue(applicationClientId, out var application);
+            var application = await _context.Application.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.ClientId == applicationClientId).ConfigureAwait(false);
 
-            return exists ? application : null;
+            return application;
         }
     }
 }

@@ -1,10 +1,16 @@
-﻿namespace Auth.Auth.Api.Controllers.Application.Requests
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using Auth.Auth.Api.Utilities.Validators;
+
+namespace Auth.Auth.Api.Controllers.Application.Requests
 {
     public class ApplicationCreateRequest
     {
-        public string Name { get; set; }
+        [Required] public string CreatorId { get; set; }
+        [Required] public string Name { get; set; }
         public string Description { get; set; }
-        public string WebsiteUrl { get; set; }
-        public string RedirectUrl { get; set; }
+        [Required, Url] public string WebsiteUrl { get; set; }
+        [Required, Url] public string RedirectUrl { get; set; }
+        [Required, PopulatedList] public List<string> Scopes { get; set; }
     }
 }

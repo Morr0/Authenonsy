@@ -18,10 +18,9 @@ namespace Auth.Auth.Api.Controllers.Application
         }
         
         [HttpPost]
-        public async Task<IActionResult> CreateApplication([FromQuery] string creatorId,
-            [FromBody] ApplicationCreateRequest dto)
+        public async Task<IActionResult> CreateApplication([FromBody] ApplicationCreateRequest dto)
         {
-            var application = await _applicationService.Create(creatorId, dto).ConfigureAwait(false);
+            var application = await _applicationService.Create(dto).ConfigureAwait(false);
 
             return Ok(new ApplicationCreateResponse
             {

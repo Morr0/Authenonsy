@@ -6,7 +6,7 @@ namespace Auth.Auth.Api.Services.ApplicationService
 {
     public interface IApplicationService
     {
-        Task<Application> Create(string creatorId, ApplicationCreateRequest applicationCreateRequest);
+        Task<Application> Create(ApplicationCreateRequest applicationCreateRequest);
         Task<Application> Get(string applicationClientId);
     }
 }
