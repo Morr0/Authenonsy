@@ -1,55 +1,58 @@
-﻿using System.Collections.Generic;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Auth.Auth.Api.Controllers.User.Requests;
 using Auth.Core.Factories;
 using Auth.Core.Models;
+using Auth.Data.Repositories.Database;
+using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Auth.Api.Services.UserService
 {
     public class UserService : IUserService
     {
         private readonly UserFactory _userFactory;
-        private readonly Dictionary<string, User> _usersById;
-        private readonly Dictionary<string, User> _usersByUsername;
+        private readonly DatabaseContext _context;
 
-        public UserService(UserFactory userFactory)
+        public UserService(UserFactory userFactory, DatabaseContext context)
         {
             _userFactory = userFactory;
-
-            _usersById = new Dictionary<string, User>();
-            _usersByUsername = new Dictionary<string, User>();
+            _context = context;
         }
 
         public async Task<User> Create(UserCreateRequest dto)
         {
             var user = _userFactory.Create(dto.Username, dto.Name, dto.Password, dto.Email);
-            
-            _usersById.Add(user.Id, user);
-            _usersByUsername.Add(user.Username, user);
+
+            await _context.AddAsync(user).ConfigureAwait(false);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
 
             return user;
         }
 
         public async Task<User> GetById(string userId)
         {
-            bool exists = _usersById.TryGetValue(userId, out var user);
+            var user = await _context.User.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId).ConfigureAwait(false);
 
-            return exists ? user : null;
+            return user;
         }
 
         public async Task<User> GetByUsername(string username)
         {
-            bool exists = _usersByUsername.TryGetValue(username, out var user);
+            var user = await _context.User.AsNoTracking().FirstOrDefaultAsync(x => x.Username == username).ConfigureAwait(false);
 
-            return exists ? user : null;
+            return user;
         }
 
         public async Task<bool> Exists(string username, string password)
         {
-            bool exists = _usersByUsername.TryGetValue(username, out var user);
-            if (!exists) return false;
-
-            bool samePassword = user.Password == password;
+            var user = await _context.User.AsNoTracking()
+                .Select(x => new
+                {
+                    x.Username,
+                    x.Password
+                })
+                .FirstOrDefaultAsync(x => x.Username == username).ConfigureAwait(false);
+            bool samePassword = user?.Password == password;
 
             return samePassword;
         }

@@ -3,6 +3,7 @@ using Auth.Auth.Api.Services.TimeService;
 using Auth.Auth.Api.Services.TokenService;
 using Auth.Auth.Api.Services.UserService;
 using Auth.Core.Factories;
+using Auth.Core.Services.RandomStringService;
 using Auth.Core.Services.TimeService;
 using Auth.Data.Repositories.Database;
 using Microsoft.AspNetCore.Builder;
@@ -33,13 +34,15 @@ namespace Auth.Auth.Api
 
             services.AddSingleton<UserFactory>();
             services.AddSingleton<ApplicationFactory>();
+            services.AddSingleton<UserApplicationFactory>();
             services.AddSingleton<TokenFactory>();
             
+            services.AddSingleton<IRandomStringService, RandomStringService>();
             services.AddSingleton<ITimeService, TimeService>();
             
-            services.AddSingleton<IUserService, UserService>();
-            services.AddSingleton<IApplicationService, ApplicationService>();
-            services.AddSingleton<ITokenService, TokenService>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IApplicationService, ApplicationService>();
+            services.AddScoped<ITokenService, TokenService>();
 
             services.AddDbContext<DatabaseContext>(opts =>
             {
