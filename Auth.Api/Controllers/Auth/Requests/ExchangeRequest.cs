@@ -14,7 +14,7 @@ namespace Auth.Api.Controllers.Auth.Requests
         [HybridBindProperty(Source.Body)] public string Code { get; set; }
         [HybridBindProperty(Source.Body)] public string Username { get; set; }
         [HybridBindProperty(Source.Body)] public string Password { get; set; }
-        
+
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             var list = new LinkedList<ValidationResult>();

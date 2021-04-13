@@ -24,13 +24,14 @@ namespace Auth.Api.Services.TokenService
             {
                 Token = Token(),
                 CreatedAt = now,
-                ExpiresAt = expiry
+                ExpiresAt = expiry,
+                RefreshToken = Token()
             };
         }
 
         private string Token()
         {
-            string proposedToken = Guid.NewGuid().ToString();
+            string proposedToken = $"{Guid.NewGuid().ToString()}{Guid.NewGuid().ToString()}";
             var hashBytes = _md5.ComputeHash(Encoding.UTF8.GetBytes(proposedToken));
             return Convert.ToBase64String(hashBytes);
         }

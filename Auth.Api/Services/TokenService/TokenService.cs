@@ -12,7 +12,8 @@ namespace Auth.Api.Services.TokenService
         private readonly TokenFactory _tokenFactory;
         private readonly ITimeService _timeService;
         private readonly Dictionary<string, CodeToken> _codes = new Dictionary<string, CodeToken>();
-        private readonly Dictionary<string, AccessToken> _tokens = new Dictionary<string, AccessToken>();
+        private readonly Dictionary<string, AccessToken> _accessTokens = new Dictionary<string, AccessToken>();
+        private readonly Dictionary<string, AccessToken> _refreshTokens = new Dictionary<string, AccessToken>();
 
         public TokenService(TokenFactory tokenFactory, ITimeService timeService)
         {
@@ -26,7 +27,24 @@ namespace Auth.Api.Services.TokenService
             
             var token = _tokenFactory.Create();
 
-            _tokens.Add(token.Token, token);
+            _accessTokens.Add(token.Token, token);
+            _refreshTokens.Add(token.RefreshToken, token);
+
+            return token;
+        }
+
+        public async Task<AccessToken> Refresh(string refreshToken)
+        {
+            bool exists = _refreshTokens.TryGetValue(refreshToken, out var oldToken);
+            if (!exists) return null;
+
+            if (_accessTokens.ContainsKey(oldToken.Token)) _accessTokens.Remove(oldToken.Token);
+            _refreshTokens.Remove(refreshToken);
+            
+            var token = _tokenFactory.Create();
+
+            _accessTokens.Add(token.Token, token);
+            _refreshTokens.Add(token.RefreshToken, token);
 
             return token;
         }
@@ -48,13 +66,13 @@ namespace Auth.Api.Services.TokenService
 
         public async Task<AccessToken> Get(string token)
         {
-            bool exists = _tokens.TryGetValue(token, out var model);
+            bool exists = _accessTokens.TryGetValue(token, out var model);
             if (!exists) return null;
 
             if (model.ExpiresAt <= _timeService.GetDateTime())
             {
                 exists = false;
-                _tokens.Remove(token);
+                _accessTokens.Remove(token);
             }
 
             return exists ? model : null;

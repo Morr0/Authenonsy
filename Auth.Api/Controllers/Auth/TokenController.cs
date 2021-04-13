@@ -47,7 +47,7 @@ namespace Auth.Api.Controllers.Auth
                     Error = $"Code {request.Code} does not exist or has expired"
                 });
             }
-            
+
             var application = await _applicationService.Get(request.ClientId).ConfigureAwait(false);
             if (application is null) return NotFound(new ExchangeErrorResponse
             {
@@ -59,7 +59,12 @@ namespace Auth.Api.Controllers.Auth
                 var accessToken = await _tokenService.GetAccessToken(request.GrantType, application)
                     .ConfigureAwait(false);
 
-                return Ok(accessToken);
+                return Ok(new AccessTokenResponse
+                {
+                    AccessToken = accessToken.Token,
+                    AccessTokenExpiresAt = accessToken.ExpiresAt.ToString("s"),
+                    RefreshToken = accessToken.RefreshToken
+                });
             }
             catch (FirstPartyApplicationMustUsePasswordGrantTypeException)
             {
@@ -83,7 +88,30 @@ namespace Auth.Api.Controllers.Auth
             var accessToken = await _tokenService.Get(request.AccessToken).ConfigureAwait(false);
             if (accessToken is null) return Unauthorized();
 
-            return Ok(accessToken);
+            return Ok();
+        }
+
+        [HttpPost("Refresh")]
+        public async Task<IActionResult> RefreshToken([FromBody] ExchangeRefreshTokenRequest request)
+        {
+            var application = await _applicationService.Get(request.ClientId).ConfigureAwait(false);
+            if (application is null)
+                return NotFound(new
+                {
+                    Error = $"Application Client Id {request.ClientId} does not exist"
+                });
+            
+            // TODO check client id/secret combination
+
+            var newAccessToken = await _tokenService.Refresh(request.RefreshToken).ConfigureAwait(false);
+            if (newAccessToken is null) return Unauthorized();
+
+            return Ok(new AccessTokenResponse
+            {
+                AccessToken = newAccessToken.Token,
+                AccessTokenExpiresAt = newAccessToken.ExpiresAt.ToString("s"),
+                RefreshToken = newAccessToken.RefreshToken
+            });
         }
     }
 }
