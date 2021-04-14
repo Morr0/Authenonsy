@@ -16,11 +16,11 @@ namespace Auth.Core.Factories
             _randomStringService = randomStringService;
         }
 
-        public UserApplicationAccess CreateAccess(string userId, string applicationId, ICollection<string> scopes)
+        public UserApplicationAccess CreateAccess(string userId, string applicationId, List<string> scopes)
         {
             return new UserApplicationAccess
             {
-                Scopes = new List<string>(scopes),
+                Scopes = scopes,
                 CreatedAt = _timeService.GetDateTime(),
                 RefreshToken = _randomStringService.NextValue(),
                 UserId = userId,

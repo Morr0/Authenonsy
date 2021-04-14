@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Auth.Api.Services.TokenService
 {
+    // TODO check expiry values
     public class TokenService : ITokenService
     {
         private readonly ITimeService _timeService;
@@ -133,6 +134,7 @@ namespace Auth.Auth.Api.Services.TokenService
                 .Include(x => x.ApplicationAccess)
                 .FirstOrDefaultAsync(x => x.AccessToken == token)
                 .ConfigureAwait(false);
+            if (userApplicationSession is null) return null;
             
             return new AccessToken
             {

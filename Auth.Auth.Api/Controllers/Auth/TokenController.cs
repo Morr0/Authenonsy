@@ -47,7 +47,7 @@ namespace Auth.Auth.Api.Controllers.Auth
             }
             catch (PasswordGrantTypeNotAllowedException)
             {
-                return BadRequest();
+                return StatusCode(403);
             }
         }
 
