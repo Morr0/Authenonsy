@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Auth.Auth.Api.Services.TokenService
 {
     // TODO check expiry values
+    // TODO don't allow accessToken from non 1st party app to issue codes for other tokens
     public class TokenService : ITokenService
     {
         private readonly ITimeService _timeService;

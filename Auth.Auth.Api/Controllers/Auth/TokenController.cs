@@ -5,12 +5,10 @@ using Auth.Auth.Api.Services.ApplicationService;
 using Auth.Auth.Api.Services.TokenService;
 using Auth.Auth.Api.Services.TokenService.Exceptions;
 using Auth.Auth.Api.Services.UserService;
-using HybridModelBinding;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Auth.Auth.Api.Controllers.Auth
 {
-    // TODO Determine which requests must client id and secret
     [ApiController]
     [Route("Token")]
     public class TokenController : ControllerBase
@@ -60,6 +58,8 @@ namespace Auth.Auth.Api.Controllers.Auth
             try
             {
                 var code = await _tokenService.GetCode(application, request.AccessToken).ConfigureAwait(false);
+                if (code is null) return StatusCode(403);
+                
                 return Ok(new CodeResponse
                 {
                     Code = code.Code,
@@ -77,10 +77,13 @@ namespace Auth.Auth.Api.Controllers.Auth
         {
             var application = await _applicationService.Get(request.ClientId).ConfigureAwait(false);
             if (application is null) return NotFound();
+            if (application.ClientSecret != request.ClientSecret) return StatusCode(403);
 
             try
             {
                 var accessToken = await _tokenService.ExchangeCodeForToken(application, request.Code).ConfigureAwait(false);
+                if (accessToken is null) return StatusCode(403);
+                
                 return Ok(new AccessTokenResponse
                 {
                     AccessToken = accessToken.Token,
