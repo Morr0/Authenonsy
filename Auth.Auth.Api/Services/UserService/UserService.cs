@@ -43,18 +43,10 @@ namespace Auth.Auth.Api.Services.UserService
             return user;
         }
 
-        public async Task<bool> Exists(string username, string password)
+        public bool IsCorrectPassword(User user, string password)
         {
-            var user = await _context.User.AsNoTracking()
-                .Select(x => new
-                {
-                    x.Username,
-                    x.Password
-                })
-                .FirstOrDefaultAsync(x => x.Username == username).ConfigureAwait(false);
-            bool samePassword = user?.Password == password;
-
-            return samePassword;
+            // TODO implement with hashing
+            return user.Password == password;
         }
     }
 }

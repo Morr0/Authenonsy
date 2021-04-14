@@ -1,93 +1,146 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Auth.Auth.Api.Services.TokenService.Exceptions;
 using Auth.Auth.Api.Services.TokenService.Models;
+using Auth.Core.Factories;
 using Auth.Core.Models;
+using Auth.Core.Models.Auth;
 using Auth.Core.Services.TimeService;
+using Auth.Data.Repositories.Database;
+using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Auth.Api.Services.TokenService
 {
     public class TokenService : ITokenService
     {
-        private readonly TokenFactory _tokenFactory;
         private readonly ITimeService _timeService;
-        private readonly Dictionary<string, CodeToken> _codes = new Dictionary<string, CodeToken>();
-        private readonly Dictionary<string, AccessToken> _accessTokens = new Dictionary<string, AccessToken>();
-        private readonly Dictionary<string, AccessToken> _refreshTokens = new Dictionary<string, AccessToken>();
+        private readonly DatabaseContext _context;
+        private readonly UserApplicationFactory _userApplicationFactory;
 
-        public TokenService(TokenFactory tokenFactory, ITimeService timeService)
+        public TokenService(ITimeService timeService, DatabaseContext context, 
+            UserApplicationFactory userApplicationFactory)
         {
-            _tokenFactory = tokenFactory;
             _timeService = timeService;
+            _context = context;
+            _userApplicationFactory = userApplicationFactory;
         }
-        
-        public async Task<AccessToken> GetAccessToken(string grantType, Application application)
+
+        public async Task<CodeToken> GetCode(Application application, string accessToken)
         {
-            EnsureCorrectGrantTypeAndApplicationPairs(grantType, application.FirstParty);
+            if (application.FirstParty) throw new FirstPartyApplicationMustUsePasswordGrantTypeException();
             
-            var token = _tokenFactory.Create();
+            // No need to check if has user access because if there is access token
+            var actualAccessTokenSession = await _context.UserApplicationSession
+                .Include(x => x.ApplicationAccess)
+                .FirstOrDefaultAsync(x => x.AccessToken == accessToken)
+                .ConfigureAwait(false);
+            if (actualAccessTokenSession is null) return null;
 
-            _accessTokens.Add(token.Token, token);
-            _refreshTokens.Add(token.RefreshToken, token);
-
-            return token;
-        }
-
-        public async Task<AccessToken> Refresh(string refreshToken)
-        {
-            bool exists = _refreshTokens.TryGetValue(refreshToken, out var oldToken);
-            if (!exists) return null;
-
-            if (_accessTokens.ContainsKey(oldToken.Token)) _accessTokens.Remove(oldToken.Token);
-            _refreshTokens.Remove(refreshToken);
+            var userApplicationCodeRequest = _userApplicationFactory.CreateCode(actualAccessTokenSession.ApplicationAccess);
             
-            var token = _tokenFactory.Create();
+            await _context.UserApplicationCodeRequest.AddAsync(userApplicationCodeRequest).ConfigureAwait(false);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
 
-            _accessTokens.Add(token.Token, token);
-            _refreshTokens.Add(token.RefreshToken, token);
-
-            return token;
+            return new CodeToken
+            {
+                Code = userApplicationCodeRequest.Code,
+                CreatedAt = userApplicationCodeRequest.CreatedAt,
+                ExpiresAt = userApplicationCodeRequest.ExpiresAt
+            };
         }
 
-        public async Task<bool> HasCode(string clientId, string code)
+        public async Task<AccessToken> ExchangeCodeForToken(Application application, string code)
         {
-            bool exists = _codes.TryGetValue(code, out var codeToken);
-            if (!exists) return false;
+            if (application.FirstParty) throw new FirstPartyApplicationMustUsePasswordGrantTypeException();
 
-            var currentDateTime = _timeService.GetDateTime();
-            if (currentDateTime >= codeToken.ExpiresAt)
+            var userApplicationCodeRequest = await _context.UserApplicationCodeRequest
+                .Include(x => x.ApplicationAccess)
+                .FirstOrDefaultAsync(x => x.Code == code).ConfigureAwait(false);
+            if (userApplicationCodeRequest is null) return null;
+
+            var userApplicationSession =
+                _userApplicationFactory.CreateSession(userApplicationCodeRequest.ApplicationAccess);
+
+            _context.Remove(userApplicationCodeRequest);
+            await _context.UserApplicationSession.AddAsync(userApplicationSession).ConfigureAwait(false);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return new AccessToken
             {
-                exists = false;
-                _codes.Remove(code);
-            }
-
-            return exists;
+                Token = userApplicationSession.AccessToken,
+                CreatedAt = userApplicationSession.CreatedAt,
+                ExpiresAt = userApplicationSession.ExpiresAt,
+                RefreshToken = userApplicationSession.ApplicationAccess.RefreshToken
+            };
         }
 
-        public async Task<AccessToken> Get(string token)
+        public async Task<AccessToken> ExchangePasswordForToken(Application application, User user)
         {
-            bool exists = _accessTokens.TryGetValue(token, out var model);
-            if (!exists) return null;
+            if (!application.FirstParty) throw new PasswordGrantTypeNotAllowedException();
+            
+            var userApplicationAccess = await EnsureUserApplicationAccessCreated(application, user);
+            var userApplicationSession = _userApplicationFactory.CreateSession(userApplicationAccess);
 
-            if (model.ExpiresAt <= _timeService.GetDateTime())
+            await _context.UserApplicationSession.AddAsync(userApplicationSession).ConfigureAwait(false);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return new AccessToken
             {
-                exists = false;
-                _accessTokens.Remove(token);
-            }
-
-            return exists ? model : null;
+                Token = userApplicationSession.AccessToken,
+                CreatedAt = userApplicationSession.CreatedAt,
+                ExpiresAt = userApplicationSession.ExpiresAt,
+                RefreshToken = userApplicationAccess.RefreshToken
+            };
         }
 
-        private void EnsureCorrectGrantTypeAndApplicationPairs(string grantType, bool firstPartyApplication)
+        private async Task<UserApplicationAccess> EnsureUserApplicationAccessCreated(Application application, User user)
         {
-            if (firstPartyApplication && grantType != TokenServiceConstants.PasswordGrantType)
+            var userApplicationAccess = await _context.UserApplicationAccess
+                .FirstOrDefaultAsync(x => x.UserId == user.Id && x.ApplicationClientId == application.ClientId)
+                .ConfigureAwait(false);
+
+            return userApplicationAccess ??
+                   _userApplicationFactory.CreateAccess(user.Id, application.ClientId, application.Scopes);
+        }
+
+        public async Task<AccessToken> RefreshAccessToken(string oldAccessToken, string refreshToken)
+        {
+            var oldUserApplicationSession = await _context.UserApplicationSession
+                .Include(x => x.ApplicationAccess)
+                .FirstOrDefaultAsync(x => x.AccessToken == oldAccessToken)
+                .ConfigureAwait(false);
+            if (oldUserApplicationSession is null) return null;
+            if (oldUserApplicationSession.ApplicationAccess.RefreshToken != refreshToken) return null;
+
+            var newUserApplicationSession =
+                _userApplicationFactory.CreateSession(oldUserApplicationSession.ApplicationAccess);
+
+            _context.Remove(oldUserApplicationSession);
+            await _context.UserApplicationSession.AddAsync(newUserApplicationSession).ConfigureAwait(false);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+            
+            return new AccessToken
             {
-                throw new FirstPartyApplicationMustUsePasswordGrantTypeException();
-            }
-            if (!firstPartyApplication && grantType == TokenServiceConstants.PasswordGrantType)
+                Token = newUserApplicationSession.AccessToken,
+                CreatedAt = newUserApplicationSession.CreatedAt,
+                ExpiresAt = newUserApplicationSession.ExpiresAt,
+                RefreshToken = newUserApplicationSession.ApplicationAccess.RefreshToken
+            };
+        }
+
+        public async Task<AccessToken> GetAccessToken(string token)
+        {
+            var userApplicationSession = await _context.UserApplicationSession.AsNoTracking()
+                .Include(x => x.ApplicationAccess)
+                .FirstOrDefaultAsync(x => x.AccessToken == token)
+                .ConfigureAwait(false);
+            
+            return new AccessToken
             {
-                throw new PasswordGrantTypeNotAllowedException();
-            }
+                Token = userApplicationSession.AccessToken,
+                CreatedAt = userApplicationSession.CreatedAt,
+                ExpiresAt = userApplicationSession.ExpiresAt,
+                RefreshToken = userApplicationSession.ApplicationAccess.RefreshToken
+            };
         }
     }
 }

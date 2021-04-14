@@ -35,7 +35,6 @@ namespace Auth.Auth.Api
             services.AddSingleton<UserFactory>();
             services.AddSingleton<ApplicationFactory>();
             services.AddSingleton<UserApplicationFactory>();
-            services.AddSingleton<TokenFactory>();
             
             services.AddSingleton<IRandomStringService, RandomStringService>();
             services.AddSingleton<ITimeService, TimeService>();

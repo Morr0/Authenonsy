@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Auth.Auth.Api.Controllers.Auth
 {
+    // TODO Determine which requests must client id and secret
     [ApiController]
     [Route("Token")]
     public class TokenController : ControllerBase
@@ -24,87 +25,80 @@ namespace Auth.Auth.Api.Controllers.Auth
             _applicationService = applicationService;
             _userService = userService;
         }
-        
-        [HttpPost]
-        public async Task<IActionResult> Exchange([FromHybrid] ExchangeRequest request)
-        {
-            if (!ModelState.IsValid) return BadRequest();
 
-            // Use ExchangeRequest
-            if (request.GrantType == TokenServiceConstants.PasswordGrantType)
-            {
-                bool existingUser = await _userService.Exists(request.Username, request.Password).ConfigureAwait(false);
-                if (!existingUser) return NotFound(new ExchangeErrorResponse
-                {
-                    Error = $"Username {request.Username} does not exist"
-                });
-            } 
-            else if (request.GrantType == TokenServiceConstants.CodeGrantType)
-            {
-                bool hasCode = await _tokenService.HasCode(request.ClientId, request.Code).ConfigureAwait(false);
-                if (!hasCode) return NotFound(new ExchangeErrorResponse
-                {
-                    Error = $"Code {request.Code} does not exist or has expired"
-                });
-            }
+        [HttpPost("Password")]
+        public async Task<IActionResult> ExchangePassword([FromBody] ExchangePasswordToAccessTokenRequest request)
+        {
+            var user = await _userService.GetByUsername(request.Username).ConfigureAwait(false);
+            if (user is null || !_userService.IsCorrectPassword(user, request.Password)) return NotFound();
 
             var application = await _applicationService.Get(request.ClientId).ConfigureAwait(false);
-            if (application is null) return NotFound(new ExchangeErrorResponse
-            {
-                Error = $"Application Client Id {request.ClientId} does not exist"
-            });
+            if (application is null) return NotFound();
 
             try
             {
-                var accessToken = await _tokenService.GetAccessToken(request.GrantType, application)
-                    .ConfigureAwait(false);
-
+                var accessToken = await _tokenService.ExchangePasswordForToken(application, user).ConfigureAwait(false);
                 return Ok(new AccessTokenResponse
                 {
                     AccessToken = accessToken.Token,
-                    AccessTokenExpiresAt = accessToken.ExpiresAt.ToString("s"),
-                    RefreshToken = accessToken.RefreshToken
-                });
-            }
-            catch (FirstPartyApplicationMustUsePasswordGrantTypeException)
-            {
-                return BadRequest(new ExchangeErrorResponse
-                {
-                    Error = $"Application Client Id {request.ClientId} must use 'grant_type={TokenServiceConstants.PasswordGrantType}'"
+                    RefreshToken = accessToken.RefreshToken,
+                    AccessTokenExpiresAt = accessToken.ExpiresAt.ToString("s")
                 });
             }
             catch (PasswordGrantTypeNotAllowedException)
             {
-                return BadRequest(new ExchangeErrorResponse
-                {
-                    Error = $"Application Client Id {request.ClientId} must use 'grant_type={TokenServiceConstants.CodeGrantType}'"
-                });
+                return BadRequest();
             }
         }
 
-        [HttpPost("Valid")]
-        public async Task<IActionResult> ValidToken([FromBody] ValidTokenRequest request)
+        [HttpPost("Code")]
+        public async Task<IActionResult> GetCode([FromBody] GetCodeRequest request)
         {
-            var accessToken = await _tokenService.Get(request.AccessToken).ConfigureAwait(false);
-            if (accessToken is null) return Unauthorized();
+            var application = await _applicationService.Get(request.ClientId).ConfigureAwait(false);
+            if (application is null) return NotFound();
 
-            return Ok();
+            try
+            {
+                var code = await _tokenService.GetCode(application, request.AccessToken).ConfigureAwait(false);
+                return Ok(new CodeResponse
+                {
+                    Code = code.Code,
+                    ExpiresAt = code.ExpiresAt.ToString("s")
+                });
+            }
+            catch (FirstPartyApplicationMustUsePasswordGrantTypeException)
+            {
+                return BadRequest();
+            }
+        }
+
+        [HttpPost("Token")]
+        public async Task<IActionResult> ExchangeCodeForAccessToken([FromBody] ExchangeCodeToAccessTokenRequest request)
+        {
+            var application = await _applicationService.Get(request.ClientId).ConfigureAwait(false);
+            if (application is null) return NotFound();
+
+            try
+            {
+                var accessToken = await _tokenService.ExchangeCodeForToken(application, request.Code).ConfigureAwait(false);
+                return Ok(new AccessTokenResponse
+                {
+                    AccessToken = accessToken.Token,
+                    RefreshToken = accessToken.RefreshToken,
+                    AccessTokenExpiresAt = accessToken.ExpiresAt.ToString("s")
+                });
+            }
+            catch (FirstPartyApplicationMustUsePasswordGrantTypeException)
+            {
+                return BadRequest();
+            }
         }
 
         [HttpPost("Refresh")]
-        public async Task<IActionResult> RefreshToken([FromBody] ExchangeRefreshTokenRequest request)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshAccessTokenRequest request)
         {
-            var application = await _applicationService.Get(request.ClientId).ConfigureAwait(false);
-            if (application is null)
-                return NotFound(new
-                {
-                    Error = $"Application Client Id {request.ClientId} does not exist"
-                });
-            
-            // TODO check client id/secret combination
-
-            var newAccessToken = await _tokenService.Refresh(request.RefreshToken).ConfigureAwait(false);
-            if (newAccessToken is null) return Unauthorized();
+            var newAccessToken = await _tokenService.RefreshAccessToken(request.AccessToken, request.RefreshToken).ConfigureAwait(false);
+            if (newAccessToken is null) return Forbid();
 
             return Ok(new AccessTokenResponse
             {
@@ -112,6 +106,15 @@ namespace Auth.Auth.Api.Controllers.Auth
                 AccessTokenExpiresAt = newAccessToken.ExpiresAt.ToString("s"),
                 RefreshToken = newAccessToken.RefreshToken
             });
+        }
+        
+        [HttpPost("Valid")]
+        public async Task<IActionResult> ValidToken([FromBody] ValidTokenRequest request)
+        {
+            var accessToken = await _tokenService.GetAccessToken(request.AccessToken).ConfigureAwait(false);
+            if (accessToken is null) return Unauthorized();
+
+            return Ok();
         }
     }
 }
