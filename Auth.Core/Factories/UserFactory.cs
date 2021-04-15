@@ -2,6 +2,7 @@
 using Auth.Core.Models;
 using Auth.Core.Models.Auth;
 using Auth.Core.Services.TimeService;
+using Auth.Core.Utilities;
 
 namespace Auth.Core.Factories
 {
@@ -19,7 +20,7 @@ namespace Auth.Core.Factories
             var user = new User
             {
                 Name = name,
-                Password = password,
+                Password = Hasher.Hash(password),
                 Email = email,
                 Username = username.ToLowerInvariant()
             };

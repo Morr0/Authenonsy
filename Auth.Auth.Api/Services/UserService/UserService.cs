@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Auth.Auth.Api.Controllers.User.Requests;
 using Auth.Core.Factories;
 using Auth.Core.Models;
+using Auth.Core.Utilities;
 using Auth.Data.Repositories.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,8 +46,7 @@ namespace Auth.Auth.Api.Services.UserService
 
         public bool IsCorrectPassword(User user, string password)
         {
-            // TODO implement with hashing
-            return user.Password == password;
+            return Hasher.IsSameHash(user.Password, password);
         }
     }
 }
