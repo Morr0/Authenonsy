@@ -22,7 +22,6 @@ namespace Auth.Core.Factories
             {
                 Scopes = scopes,
                 CreatedAt = _timeService.GetDateTime(),
-                RefreshToken = _randomStringService.NextValue(),
                 UserId = userId,
                 ApplicationClientId = applicationId
             };
@@ -48,7 +47,8 @@ namespace Auth.Core.Factories
                 ApplicationAccess = applicationAccess,
                 AccessToken = _randomStringService.NextValue(),
                 CreatedAt = datetime,
-                ExpiresAt = datetime.AddHours(1)
+                ExpiresAt = datetime.AddHours(1),
+                RefreshToken = _randomStringService.NextValue()
             };
         }
     }

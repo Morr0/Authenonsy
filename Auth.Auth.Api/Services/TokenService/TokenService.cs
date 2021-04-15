@@ -71,7 +71,7 @@ namespace Auth.Auth.Api.Services.TokenService
                 Token = userApplicationSession.AccessToken,
                 CreatedAt = userApplicationSession.CreatedAt,
                 ExpiresAt = userApplicationSession.ExpiresAt,
-                RefreshToken = userApplicationSession.ApplicationAccess.RefreshToken
+                RefreshToken = userApplicationSession.RefreshToken
             };
         }
 
@@ -90,7 +90,7 @@ namespace Auth.Auth.Api.Services.TokenService
                 Token = userApplicationSession.AccessToken,
                 CreatedAt = userApplicationSession.CreatedAt,
                 ExpiresAt = userApplicationSession.ExpiresAt,
-                RefreshToken = userApplicationAccess.RefreshToken
+                RefreshToken = userApplicationSession.RefreshToken
             };
         }
 
@@ -111,7 +111,7 @@ namespace Auth.Auth.Api.Services.TokenService
                 .FirstOrDefaultAsync(x => x.AccessToken == oldAccessToken)
                 .ConfigureAwait(false);
             if (oldUserApplicationSession is null) return null;
-            if (oldUserApplicationSession.ApplicationAccess.RefreshToken != refreshToken) return null;
+            if (oldUserApplicationSession.RefreshToken != refreshToken) return null;
 
             var newUserApplicationSession =
                 _userApplicationFactory.CreateSession(oldUserApplicationSession.ApplicationAccess);
@@ -125,7 +125,7 @@ namespace Auth.Auth.Api.Services.TokenService
                 Token = newUserApplicationSession.AccessToken,
                 CreatedAt = newUserApplicationSession.CreatedAt,
                 ExpiresAt = newUserApplicationSession.ExpiresAt,
-                RefreshToken = newUserApplicationSession.ApplicationAccess.RefreshToken
+                RefreshToken = newUserApplicationSession.RefreshToken
             };
         }
 
@@ -142,7 +142,7 @@ namespace Auth.Auth.Api.Services.TokenService
                 Token = userApplicationSession.AccessToken,
                 CreatedAt = userApplicationSession.CreatedAt,
                 ExpiresAt = userApplicationSession.ExpiresAt,
-                RefreshToken = userApplicationSession.ApplicationAccess.RefreshToken
+                RefreshToken = userApplicationSession.RefreshToken
             };
         }
     }
