@@ -9,5 +9,6 @@ namespace Auth.Core.Models.Auth
         public DateTime ExpiresAt { get; set; }
         public UserApplicationAccess ApplicationAccess { get; set; }
         public string RefreshToken { get; set; }
+        public bool CanIssueCode { get; set; }
     }
 }

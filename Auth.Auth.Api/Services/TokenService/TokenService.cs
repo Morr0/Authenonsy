@@ -11,17 +11,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Auth.Auth.Api.Services.TokenService
 {
     // TODO check expiry values
-    // TODO don't allow accessToken from non 1st party app to issue codes for other tokens
     public class TokenService : ITokenService
     {
-        private readonly ITimeService _timeService;
         private readonly DatabaseContext _context;
         private readonly UserApplicationFactory _userApplicationFactory;
 
-        public TokenService(ITimeService timeService, DatabaseContext context, 
-            UserApplicationFactory userApplicationFactory)
+        public TokenService(DatabaseContext context, UserApplicationFactory userApplicationFactory)
         {
-            _timeService = timeService;
             _context = context;
             _userApplicationFactory = userApplicationFactory;
         }
@@ -36,6 +32,7 @@ namespace Auth.Auth.Api.Services.TokenService
                 .FirstOrDefaultAsync(x => x.AccessToken == accessToken)
                 .ConfigureAwait(false);
             if (actualAccessTokenSession is null) return null;
+            if (!actualAccessTokenSession.CanIssueCode) return null; 
 
             var userApplicationCodeRequest = _userApplicationFactory.CreateCode(actualAccessTokenSession.ApplicationAccess);
             
@@ -80,7 +77,7 @@ namespace Auth.Auth.Api.Services.TokenService
             if (!application.FirstParty) throw new PasswordGrantTypeNotAllowedException();
             
             var userApplicationAccess = await EnsureUserApplicationAccessCreated(application, user);
-            var userApplicationSession = _userApplicationFactory.CreateSession(userApplicationAccess);
+            var userApplicationSession = _userApplicationFactory.CreateSession(userApplicationAccess, true);
 
             await _context.UserApplicationSession.AddAsync(userApplicationSession).ConfigureAwait(false);
             await _context.SaveChangesAsync().ConfigureAwait(false);

@@ -39,7 +39,7 @@ namespace Auth.Core.Factories
             };
         }
 
-        public UserApplicationSession CreateSession(UserApplicationAccess applicationAccess)
+        public UserApplicationSession CreateSession(UserApplicationAccess applicationAccess, bool canIssueCode = false)
         {
             var datetime = _timeService.GetDateTime();
             return new UserApplicationSession
@@ -48,7 +48,8 @@ namespace Auth.Core.Factories
                 AccessToken = _randomStringService.NextValue(),
                 CreatedAt = datetime,
                 ExpiresAt = datetime.AddHours(1),
-                RefreshToken = _randomStringService.NextValue()
+                RefreshToken = _randomStringService.NextValue(),
+                CanIssueCode = canIssueCode
             };
         }
     }
