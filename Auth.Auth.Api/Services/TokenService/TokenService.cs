@@ -10,14 +10,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Auth.Api.Services.TokenService
 {
-    // TODO check expiry values
     public class TokenService : ITokenService
     {
+        private readonly ITimeService _timeService;
         private readonly DatabaseContext _context;
         private readonly UserApplicationFactory _userApplicationFactory;
 
-        public TokenService(DatabaseContext context, UserApplicationFactory userApplicationFactory)
+        public TokenService(ITimeService timeService, DatabaseContext context, UserApplicationFactory userApplicationFactory)
         {
+            _timeService = timeService;
             _context = context;
             _userApplicationFactory = userApplicationFactory;
         }
@@ -32,7 +33,14 @@ namespace Auth.Auth.Api.Services.TokenService
                 .FirstOrDefaultAsync(x => x.AccessToken == accessToken)
                 .ConfigureAwait(false);
             if (actualAccessTokenSession is null) return null;
-            if (!actualAccessTokenSession.CanIssueCode) return null; 
+            if (!actualAccessTokenSession.CanIssueCode) return null;
+
+            if (_timeService.GetDateTime() >= actualAccessTokenSession.ExpiresAt)
+            {
+                _context.Remove(actualAccessTokenSession);
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+                throw new ExpiredAccessTokenException();
+            }
 
             var userApplicationCodeRequest = _userApplicationFactory.CreateCode(actualAccessTokenSession.ApplicationAccess);
             
@@ -55,6 +63,13 @@ namespace Auth.Auth.Api.Services.TokenService
                 .Include(x => x.ApplicationAccess)
                 .FirstOrDefaultAsync(x => x.Code == code).ConfigureAwait(false);
             if (userApplicationCodeRequest is null) return null;
+
+            if (_timeService.GetDateTime() >= userApplicationCodeRequest.ExpiresAt)
+            {
+                _context.Remove(userApplicationCodeRequest);
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+                throw new ExpiredCodeException();
+            }
 
             var userApplicationSession =
                 _userApplicationFactory.CreateSession(userApplicationCodeRequest.ApplicationAccess);
@@ -133,6 +148,13 @@ namespace Auth.Auth.Api.Services.TokenService
                 .FirstOrDefaultAsync(x => x.AccessToken == token)
                 .ConfigureAwait(false);
             if (userApplicationSession is null) return null;
+            
+            if (_timeService.GetDateTime() >= userApplicationSession.ExpiresAt)
+            {
+                _context.Remove(userApplicationSession);
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+                throw new ExpiredAccessTokenException();
+            }
             
             return new AccessToken
             {

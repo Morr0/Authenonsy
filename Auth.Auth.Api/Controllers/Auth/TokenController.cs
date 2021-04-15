@@ -59,7 +59,7 @@ namespace Auth.Auth.Api.Controllers.Auth
             {
                 var code = await _tokenService.GetCode(application, request.AccessToken).ConfigureAwait(false);
                 if (code is null) return StatusCode(403);
-                
+
                 return Ok(new CodeResponse
                 {
                     Code = code.Code,
@@ -69,6 +69,13 @@ namespace Auth.Auth.Api.Controllers.Auth
             catch (FirstPartyApplicationMustUsePasswordGrantTypeException)
             {
                 return BadRequest();
+            }
+            catch (ExpiredAccessTokenException)
+            {
+                return NotFound(new
+                {
+                    Error = $"Access Token: {request.AccessToken} has expired"
+                });
             }
         }
 
@@ -95,6 +102,13 @@ namespace Auth.Auth.Api.Controllers.Auth
             {
                 return BadRequest();
             }
+            catch (ExpiredCodeException)
+            {
+                return NotFound(new
+                {
+                    Error = $"Code: {request.Code} has expired"
+                });
+            }
         }
 
         [HttpPost("Refresh")]
@@ -114,10 +128,20 @@ namespace Auth.Auth.Api.Controllers.Auth
         [HttpPost("Valid")]
         public async Task<IActionResult> ValidToken([FromBody] ValidTokenRequest request)
         {
-            var accessToken = await _tokenService.GetAccessToken(request.AccessToken).ConfigureAwait(false);
-            if (accessToken is null) return Unauthorized();
+            try
+            {
+                var accessToken = await _tokenService.GetAccessToken(request.AccessToken).ConfigureAwait(false);
+                if (accessToken is null) return Unauthorized();
 
-            return Ok();
+                return Ok();
+            }
+            catch (ExpiredAccessTokenException)
+            {
+                return NotFound(new
+                {
+                    Error = $"Access Token: {request.AccessToken} has expired"
+                });
+            }
         }
     }
 }
